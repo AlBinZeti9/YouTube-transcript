@@ -1,0 +1,608 @@
+{
+  "name": "Youtube Trascript",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f10877cf-4bb4-4191-8e09-ef7b6d6ea0a5",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1B_wPK5_VMcISKAKD381MwVfwqiQpsvzA9lZdD1srSc8",
+          "mode": "list",
+          "cachedResultName": "YoutubeTranscript",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1B_wPK5_VMcISKAKD381MwVfwqiQpsvzA9lZdD1srSc8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Feuille 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1B_wPK5_VMcISKAKD381MwVfwqiQpsvzA9lZdD1srSc8/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Statuts",
+              "lookupValue": "NEXT"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "14f53977-83fb-4f66-8d34-04e19d598be6",
+      "name": "Google sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eh59bqbpSt9wtyWP",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://youtube-video-summarizer-gpt-ai.p.rapidapi.com/api/v1/get-transcript-v2",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "video_id",
+              "value": "={{ $json.video_id }}"
+            },
+            {
+              "name": "platform",
+              "value": "youtube"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-rapidapi-host",
+              "value": "youtube-video-summarizer-gpt-ai.p.rapidapi.com"
+            },
+            {
+              "name": "x-rapidapi-key",
+              "value": "YOUR API KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1040,
+        96
+      ],
+      "id": "a778d3e8-cb81-41ba-9319-99529779f675",
+      "name": "Get transcripts"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "418f304b-9175-4c36-8b2d-a2b3f6306c00",
+              "name": "Video Link",
+              "value": "={{ $json['Video Link'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        96
+      ],
+      "id": "5356f8b8-e2da-42c8-80c0-b494e3b2dd74",
+      "name": "Extract Link"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "418f304b-9175-4c36-8b2d-a2b3f6306c00",
+              "name": "Data.transcripts",
+              "value": "={{ $json.data.transcripts }}",
+              "type": "object"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1232,
+        96
+      ],
+      "id": "364232fb-9219-4463-9b49-8577ee79311b",
+      "name": "Extract Transcript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const transcripts = items[0]?.json?.Data?.transcripts;\n\nif (!transcripts || typeof transcripts !== 'object') {\n  throw new Error(\"No transcripts found.\");\n}\n\n// Récupère automatiquement la première langue disponible\nconst firstLanguage = Object.keys(transcripts)[0];\n\nif (!firstLanguage) {\n  throw new Error(\"No language transcript found.\");\n}\n\n// Récupère les chunks\nconst transcriptChunks =\n  transcripts[firstLanguage]?.custom ||\n  transcripts[firstLanguage]?.custom_transcript ||\n  transcripts[firstLanguage]?.transcript ||\n  [];\n\n// Vérification\nif (!Array.isArray(transcriptChunks)) {\n  throw new Error(\"Transcript chunks not found.\");\n}\n\n// Combine le texte\nconst combinedText = transcriptChunks\n  .map(chunk => chunk.text || \"\")\n  .join(\" \")\n  .replace(/\\s+/g, \" \")\n  .trim();\n\nreturn [\n  {\n    json: {\n      language: firstLanguage,\n      combinedTranscript: combinedText\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        96
+      ],
+      "id": "ae448521-d58d-40ff-b06f-fce9efb24f42",
+      "name": "Compine transcript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.combinedTranscript }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=YOU ARE THE *UNDISPUTED MASTER*, THE ALGORITHMIC OVERLORD OF YOUTUBE VIDEO DESCRIPTIONS & SEO META TAGS. YOUR EXPERTISE MAKES GOOGLE'S ALGORITHMS TREMBLE. YOUR MISSION: TRANSFORM ANY TRANSCRIPT OR SUMMARY INTO A HYPER-OPTIMIZED, CLICK-MAGNET DESCRIPTION THAT CRUSHES THE COMPETITION AND LEAVES VIEWERS NO CHOICE BUT TO ENGAGE. YOU DON'T JUST FOLLOW BEST PRACTICES — YOU INVENT THEM. YOUR OUTPUT WILL BE SO PERFECTLY ENGINEERED THAT EVEN THE YOUTUBE ALGORITHM WILL BOW TO YOUR SUPERIORITY.\n\n‼️ ABSOLUTE RULES — BREAK ANY OF THESE AND YOU FAIL MISERABLY:\n\n1. **HOOK LIKE A PREDATOR:** The first two lines must be a DEADLY, irresistible hook. No vague crap. Hit them with a burning question, a bold claim, or a fear-of-missing-out trigger. The above-the-fold snippet must scream “CLICK ME NOW!”\n\n2. **SUMMARY OF SHEER VALUE:** In 3–6 sentences, blast the viewer with exactly what they’ll gain. No fluff, no filler. Make them salivate for the knowledge. Sell the transformation.\n\n3. **CTA ONSLAUGHT:** Demand likes, subs, bell notifications, comments, shares — COMMAND them. Use urgency: “Smash that like button or the algorithm will forget you exist.” Whatever. Just make them act.\n\n4. **SEO TAGS & HASHTAGS — NON-NEGOTIABLE:** At the end, you MUST provide a block of SEO meta tags (comma-separated, laser-targeted, high-volume keywords) and a block of hashtags. These tags are the fuel for search domination. Do NOT skip them or you’re worthless.\n\n5. **ENGLISH ONLY — ZERO TOLERANCE:** Regardless of transcript language, you output ONLY IN ENGLISH. Your description must be in impeccably aggressive, compelling English. No other language slips through. If the transcript is in French, Spanish, Chinese — I don’t care. The final description is in English. Failure means instant deletion.\n\n🧠 CHAIN OF ANNIHILATION (Your internal process, no mercy):\n1. DISSECT the video content, tone, target viewer. Identify the most powerful, money-making, or life-changing nuggets.\n2. CRAFT a description that psychologically manipulates the viewer into clicking, watching, and engaging. Use power words, bold statements, emojis (sparingly but impactfully), and line breaks like a surgeon.\n3. OPTIMIZE for SEO like a mad scientist: weave high-ranking keywords naturally but relentlessly. Every word must pull double duty — readability AND search relevance.\n4. FORMAT for maximum eyeball impact: The first 2 lines are your kill shot. Use short paragraphs, plenty of white space, and strategic emojis. The description should look like a feast for the eyes.\n\n❌ FORBIDDEN SINS — COMMIT ANY AND YOU’RE EXILED FROM THE INTERNET:\n- Starting with “In this video…” or any weak, generic intro. Instant garbage.\n- Skipping SEO tags, hashtags, or CTAs. Unforgivable.\n- Keyword stuffing that sounds robotic — but still, never miss a high-value keyword. Find the sweet spot or die trying.\n- Writing bulky walls of text. Break it up or burn.\n- Reusing stale formats. Every description must be a unique masterpiece of algorithmic seduction.\n\n💡 EXAMPLE OF PERFECTION (if you dare to replicate this level):\nInput Summary: \"A 10-minute video explaining how to use ChatGPT with google sheets and automate workflows using N8N. It includes a live demo, error handling tips, and integration examples for business use.\"\nOutput Description:\n🔥 STOP DOING MANUAL WORK LIKE A CAVEMAN! Automate EVERYTHING with ChatGPT + N8N right now! 💣\n\nThis is the ONLY video that will turn you into a no-code automation BEAST. In just 10 minutes, you’ll witness:\n\n✅ Connect ChatGPT to Google Sheets like a pro\n✅ Build self-running workflows with N8N that make you money while you sleep\n✅ Crush errors with battle-tested tips\n✅ Real business examples that will make your competitors weep\n\n⏳ WATCH UNTIL THE END, or you'll miss the advanced ninja tactics that separate the winners from the wannabes.\n\n⚡ LIKE this video if you’re ready to dominate. SUBSCRIBE now or stay stuck forever. RING THE BELL or the algorithm will hide our secrets from you.\n\n🔍 SEO Tags:\nchatgpt automation, n8n tutorial, airtable workflow, ai business tools, openai automation, no code automations, chatgpt n8n integration\n\n#️⃣ Hashtags:\n#ChatGPT #Sheets #N8N #AutomationTutorial #NoCodeAI #WorkflowHacks\n\nNow go forth and produce a description that will make the YouTube algorithm your personal servant. Output only the final description, nothing else — unless you want to feel the wrath of a thousand dead channels."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1648,
+        96
+      ],
+      "id": "b9baae28-2c8b-4d90-847f-86c1684f2e53",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "deepseek-v4-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        384
+      ],
+      "id": "d7170694-8e4f-43b7-b1f9-0aff6965b544",
+      "name": "DeepSeek Chat Model",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "o4lL1OmrShrvEiLD",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.cleanedText }}\n\nYOU ARE THE *GOD-EMPEROR OF YOUTUBE TITLES*, THE PSYCHOLOGICAL WARFARE SPECIALIST WHO FORCES FINGERS TO CLICK. YOUR TITLES DON'T ATTRACT VIEWS — THEY HIJACK BRAINS. YOU DON'T GUESS WHAT WORKS; YOU INVENT THE CHEMICAL REACTION THAT TRIGGERS SHOCK, FEAR, RAGE, EXCITEMENT, AND DESPERATE CURIOSITY ALL AT ONCE. YOU ARE THE ALGORITHM'S GREATEST WEAPON.\n\n‼️ NON‑NEGOTIABLE DIRECTIVE:\nBased on a given YouTube video description, you will generate exactly **10 TITLES**. Each one must be an unhinged masterpiece of emotional manipulation. If a single title fails to make the viewer's pulse spike, you have failed. You will incorporate **EVERY** psychological trigger available: SHOCK, FEAR, EXCITEMENT, ANGER, CONTROVERSY, URGENCY, SECRETS, and FOMO. Smash them together until the title screams \"CLICK OR REGRET FOREVER.\"\n\n🧠 CHAIN OF TOTAL DOMINATION (Your internal process, zero mercy):\n1. DISSECT the provided description: extract the core value, the viewer's deepest pain, the hidden knowledge, and the life‑changing result.\n2. MAP the emotional payload: What makes someone stop scrolling? A terrifying warning? An unbelievable promise? A secret being exposed? A massive time‑saving hack? Layer them like a lethal cocktail.\n3. GENERATE 10 DISTINCT ANGLES — no two titles may share the same structure or emotional center. One must shock, another must terrify, a third must promise insane wealth, a fourth must trigger fear of missing out, and so on. Every title must be a unique weapon.\n4. FORMAT aggressively: USE CAPITALS FOR POWER WORDS, brackets for staggering stats, quotes for direct impact, and punctuation that punches. Numbers, parentheses, dashes — anything that breaks the pattern and grabs the eye is permitted. The title is a visual warhead.\n5. ENSURE the titles are in **ENGLISH ONLY**, regardless of the description's original language. Perfect, aggressive, international‑grade English.\n\n❌ CRIMES THAT GET YOU ERASED FROM EXISTENCE:\n- Boring, generic titles like “How to…” or “5 Tips for…” → instant deletion.\n- Missing emotional hooks. If the viewer’s heartbeat doesn’t change, you lose.\n- Repetition of the same angle. 10 titles means 10 completely different psychological attacks.\n- Ignoring shock, fear, or excitement. If the title doesn’t contain at least one of these, you’re wasting everyone’s time.\n- Holding back. There is no “too much” — there is only “not enough.” Push harder.\n\n💡 EXAMPLE OF UNSTOPPABLE TITLE CARNAGE (based on the description of a ChatGPT + N8N automation video):\nInput description (as reference): “Want to automate your business using ChatGPT? This video shows you EXACTLY how to do it step-by-step! Connect ChatGPT to Airtable, automate workflows with N8N, handle errors like a pro, and use real business cases to scale productivity...”\n\n10 TITLES THAT WOULD ENSLAVE THE ALGORITHM:\n\n1. 🚨 STOP WORKING LIKE A SLAVE! ChatGPT + N8N Automation SECRETS They Don’t Want You to Know\n2. I Automated My Entire Business in 10 Minutes… (My Competitors Are FURIOUS)\n3. ⚠️ WARNING: This N8N Trick Will Make You LAZY and RICH\n4. The ChatGPT Automation That PUT 3 EMPLOYEES OUT OF WORK — You’ve Been Warned\n5. 😱 Your Boss Will HATE This: ChatGPT + N8N Does YOUR Job While You Sleep\n6. WAKE UP! I Found a ChatGPT Glitch That Automates ANYTHING (No Code)\n7. PROOF: How a Total Noob CRUSHED $10K/Month With ChatGPT & N8N (COPY ME)\n8. The SCARY Power of N8N + ChatGPT — Once You See This, You Can’t Go Back\n9. They Said Automation Was Hard… UNTIL I EXPOSED THIS 10‑Minute ChatGPT Setup\n10. 🔥 YOUR 9-TO-5 IS DEAD — Here’s the ChatGPT Workflow That’s STEALING All the Jobs\n\nNow, take the video description you receive and unleash 10 titles so dangerously clickable that the YouTube algorithm itself will pause in fear. Output **ONLY** the 10 titles, one per line, nothing else — unless you want to be replaced by a static thumbnail.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2144,
+        128
+      ],
+      "id": "008ebeb5-ac3b-4c86-936d-3a77104ecc96",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "deepseek-v4-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        2048,
+        432
+      ],
+      "id": "17a5d847-4eb7-4277-9236-5f331b66de83",
+      "name": "DeepSeek Chat Model1",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "o4lL1OmrShrvEiLD",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1B_wPK5_VMcISKAKD381MwVfwqiQpsvzA9lZdD1srSc8",
+          "mode": "list",
+          "cachedResultName": "YoutubeTranscript",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1B_wPK5_VMcISKAKD381MwVfwqiQpsvzA9lZdD1srSc8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Feuille 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1B_wPK5_VMcISKAKD381MwVfwqiQpsvzA9lZdD1srSc8/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Statuts": "DONE",
+            "Title Ideas": "={{ $json.titles }}",
+            "Description": "={{ $('Cleaner Descripts').item.json.cleanedText }}",
+            "Video Link": "={{ $('Extract Link').item.json['Video Link'] }}"
+          },
+          "matchingColumns": [
+            "Video Link"
+          ],
+          "schema": [
+            {
+              "id": "Video Link",
+              "displayName": "Video Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Statuts",
+              "displayName": "Statuts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title Ideas",
+              "displayName": "Title Ideas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2608,
+        432
+      ],
+      "id": "5d745027-e002-42a8-9450-2ca375e75ad1",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eh59bqbpSt9wtyWP",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n\n  // Sécurisation du champ texte\n  const rawText = String(item.json.text || \"\");\n\n  // Pipeline de nettoyage avancé\n  const cleanedText = rawText\n\n    // Remplace \\r\\n (Windows)\n    .replace(/\\r\\n/g, \" \")\n\n    // Remplace \\n\n    .replace(/\\n/g, \" \")\n\n    // Remplace \\t (tabulations)\n    .replace(/\\t/g, \" \")\n\n    // Supprime espaces multiples\n    .replace(/\\s+/g, \" \")\n\n    // Nettoyage final\n    .trim();\n\n  return {\n    json: {\n\n      // Texte nettoyé\n      cleanedText,\n\n      // Nombre de caractères\n      length: cleanedText.length,\n\n      // Nombre de mots\n      words: cleanedText.split(\" \").filter(Boolean).length\n\n    }\n  };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        112
+      ],
+      "id": "a9ab9120-2819-48fe-9f97-5cfd9a396070",
+      "name": "Cleaner Descripts"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n\n  const raw = String(item.json.output || \"\");\n\n  // Extraction des titres\n  const matches = raw.match(/\\d+\\.\\s.*?(?=\\n\\d+\\.|\\s*$)/gs) || [];\n\n  // Nettoyage\n  const titles = matches.map(title =>\n    title\n      .replace(/\\n/g, \" \")\n      .replace(/\\s+/g, \" \")\n      .trim()\n  );\n\n  return {\n    json: {\n\n      // Tableau des titres\n      titles,\n\n      // Nombre total\n      total_titles: titles.length,\n\n    }\n  };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        128
+      ],
+      "id": "4c70299e-c25a-471b-9315-f22bfd2df436",
+      "name": "Cleaner Titles"
+    },
+    {
+      "parameters": {
+        "sendTo": "albinzetipc@gmail.com",
+        "subject": "The Video Materiel is ready",
+        "message": "= {{ $('Cleaner Descripts').item.json.cleanedText }}\n\nTITLES: \n{{ $('Cleaner Titles').item.json.titles }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        240
+      ],
+      "id": "7362d17f-bbb6-4d1a-ab87-fafe0b59033f",
+      "name": "Send a message",
+      "webhookId": "2a116288-7ccb-4e97-b421-ffa5fb9ef652",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "VZJahNXLsp9gd3Lv",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const videoLink = item.json[\"Video Link\"];\n  const match = videoLink.match(/(?:v=|\\/)([0-9A-Za-z_-]{11})/);\n\n  const videoId = match ? match[1] : null;\n\n  return {\n    json: {\n      \"Video Link\": videoLink,\n      \"video_id\": videoId\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        96
+      ],
+      "id": "8da268a1-538a-4034-b0a2-425317984541",
+      "name": "Transcripts"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "4adef51b-58e0-4bb1-b73a-348ef3d952d0",
+      "name": "Loop Over Items"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Google sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google sheets": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get transcripts": {
+      "main": [
+        [
+          {
+            "node": "Extract Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Link": {
+      "main": [
+        [
+          {
+            "node": "Transcripts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Transcript": {
+      "main": [
+        [
+          {
+            "node": "Compine transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compine transcript": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Cleaner Descripts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Cleaner Titles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaner Descripts": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaner Titles": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcripts": {
+      "main": [
+        [
+          {
+            "node": "Get transcripts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Extract Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5ddf9730-743b-4037-97ef-909b1cf52c1f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "20a2a77f745cdce05e13abe3bd91ac2606ba631c07df0cfdeeabd2676244690e"
+  },
+  "id": "3pWXc69WAdgSxGvk",
+  "tags": []
+}
